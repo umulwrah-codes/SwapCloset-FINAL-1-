@@ -1,0 +1,5 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Bell, Check, ChevronLeft, Heart, Leaf, LogOut, Menu, Plus, Repeat2, Search, Shirt, Shield, Sparkles, UserRound, X } from 'lucide-react';
+import { api, useAuth, Protected, ItemCard, PageTitle, Empty, Step, DashCard, categories, conditions, images } from '../shared.jsx';
+export default function Notifications(){const [notes,setNotes]=useState([]);useEffect(()=>{api('/notifications').then(x=>setNotes(x.notifications));api('/notifications/read-all',{method:'PATCH'}).catch(()=>{})},[]);return <Protected><PageTitle title="Notifications" text="Your latest SwapCloset activity."/><div className="list">{notes.map(n=><div className={'note '+(!n.is_read?'unread':'')} key={n.id}><Bell size={18}/><div><b>{n.title}</b><p>{n.message}</p><small>{new Date(n.created_at).toLocaleString()}</small></div></div>)}</div>{!notes.length&&<Empty title="You're all caught up" text="New swap activity will appear here."/>}</Protected>}

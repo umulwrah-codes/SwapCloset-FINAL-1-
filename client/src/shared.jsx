@@ -1,0 +1,26 @@
+import React,{createContext,useContext,useEffect,useMemo,useState} from 'react';
+import {BrowserRouter,useNavigate,useLocation,Routes,Route,Link,useParams,useSearchParams} from 'react-router-dom';
+import {ArrowRight, Bell, Check, ChevronLeft, Heart, Leaf, LogOut, Menu, Plus, Repeat2, Search, Shirt, Shield, Sparkles, UserRound, X} from 'lucide-react';
+import './styles.css';
+
+export const API='http://localhost:5000/api';
+export const images=['/images/denim.jpg','/images/coat.jpg','/images/knit.jpg','/images/sneakers.jpg','/images/kids.jpg','/images/scarf.jpg'];
+export const categories=['Women','Men','Kids','Unisex','Accessories'];
+export const conditions=['New with tags','Like new','Gently used','Well worn'];
+
+
+export async function api(path,options={}){const token=localStorage.getItem('swap_token');const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;const r=await fetch(API+path,{...options,headers});let data={};try{data=await r.json()}catch{}if(!r.ok)throw new Error(data.error||'Something went wrong.');return data;}
+
+const AuthContext=createContext(null);
+export const useAuth=()=>useContext(AuthContext);
+export function AuthProvider({children}){const [user,setUser]=useState(null);const [loading,setLoading]=useState(true);useEffect(()=>{const t=localStorage.getItem('swap_token');if(!t){setLoading(false);return}api('/auth/me').then(x=>setUser(x.user)).catch(()=>localStorage.removeItem('swap_token')).finally(()=>setLoading(false))},[]);const login=(data)=>{localStorage.setItem('swap_token',data.token);setUser(data.user)};const logout=()=>{localStorage.removeItem('swap_token');setUser(null)};return <AuthContext.Provider value={{user,loading,login,logout}}>{children}</AuthContext.Provider>}
+export function Protected({children}){const {user,loading}=useAuth();if(loading)return <Loading/>;return user?children:<NavigateToAuth/>}
+export function NavigateToAuth(){const nav=useNavigate();useEffect(()=>nav('/auth'),[nav]);return <Loading/>}
+export function Loading(){return <div className="center"><div className="spinner"/><p>Loading SwapCloset…</p></div>}
+export function Header(){const {user,logout}=useAuth();const [open,setOpen]=useState(false);const nav=useNavigate();return <header className="header"><div className="wrap nav"><Link to="/" className="brand"><Repeat2 size={21}/>SwapCloset</Link><nav className={open?'navlinks open':'navlinks'}><Link to="/browse">Browse</Link>{user&&<><Link to="/my-listings">My listings</Link><Link to="/swaps">Swaps</Link><Link to="/wishlist">Wishlist</Link></>}{user?.role==='admin'&&<Link to="/admin">Admin</Link>}</nav><div className="navright">{user?<><Link className="iconbtn" to="/notifications"><Bell size={19}/></Link><Link className="avatar" to="/profile">{user.name[0]}</Link><button className="ghost hideMobile" onClick={()=>{logout();nav('/')}}>Sign out</button></>:<Link className="btn small" to="/auth">Sign in</Link>}<button className="mobilemenu" onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button></div></div></header>}
+export function Layout({children}){return <><Header/><main className="wrap main">{children}</main><footer><div className="wrap footer"><div><div className="brand"><Repeat2 size={18}/>SwapCloset</div><p>Swap clothes, not money. Give your wardrobe a second life.</p></div><div><b>Explore</b><Link to="/browse">Browse</Link><Link to="/how-it-works">How it works</Link></div><div><b>Community</b><Link to="/auth">Join SwapCloset</Link><Link to="/profile">Profile</Link></div></div></footer></>}
+export function ItemCard({item}){const [wish,setWish]=useState(false);const {user}=useAuth();useEffect(()=>{if(user)api(`/items/${item.id}`).then(x=>setWish(x.wished)).catch(()=>{})},[user,item.id]);const toggle=async(e)=>{e.preventDefault();if(!user)return location.href='/auth';try{if(wish){await api(`/wishlist/${item.id}`,{method:'DELETE'});setWish(false)}else{await api(`/wishlist/${item.id}`,{method:'POST'});setWish(true)}}catch(err){alert(err.message)}};return <Link to={`/items/${item.id}`} className="card itemcard"><div className="imgwrap"><img src={item.image_url} alt={item.title}/><button className={wish?'wish active':'wish'} onClick={toggle}><Heart size={17} fill={wish?'currentColor':'none'}/></button></div><div className="pad"><div className="row"><h3>{item.title}</h3>{item.status!=='available'&&<span className="pill">{item.status}</span>}</div><p className="muted">{item.category} · Size {item.size} · {item.condition}</p><small>{item.owner_name||'SwapCloset member'} · {item.location||'Online'}</small></div></Link>}
+export function Step({n,icon,title,text}){return <div className="step"><div className="stepicon">{icon}</div><small>{n}</small><h3>{title}</h3><p>{text}</p></div>}
+export function DashCard({to,icon,title,text}){return <Link className="dashcard" to={to}><div className="stepicon">{icon}</div><h3>{title}</h3><p>{text}</p><ArrowRight size={17}/></Link>}
+export function PageTitle({title,text,action}){return <div className="pagetitle"><div><h1>{title}</h1><p>{text}</p></div>{action}</div>}
+export function Empty({title,text}){return <div className="empty"><div className="stepicon"><Shirt/></div><h2>{title}</h2><p>{text}</p></div>}
